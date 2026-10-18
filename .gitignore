@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+# модель обучается командой python src/train.py (или сама при первом запуске app.py)
+models/
+.vscode/
