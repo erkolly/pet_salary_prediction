@@ -1,14 +1,5 @@
-"""
-features.py — подготовка признаков.
-
-Идея из EDA: главное — опыт, должность (но сгруппированная по смыслу)
-и где человек живёт/работает. Поэтому:
-  * experience_level, company_size  → порядковые числа (EN < MI < SE < EX)
-  * job_title (50 уникальных, много единичных) → job_family + is_leadership
-  * страны (50+ уникальных) → регион с похожим уровнем зарплат
-  * salary и salary_currency выкидываем: это утечка таргета
-    (salary — та же зарплата, только в другой валюте)
-"""
+"""Признаки модели: порядковые уровни, семейства должностей, регионы стран.
+Общие для обучения и приложения."""
 import numpy as np
 import pandas as pd
 
@@ -19,14 +10,13 @@ EXPERIENCE_LABELS = {"EN": "Junior (EN)", "MI": "Middle (MI)", "SE": "Senior (SE
 COMPANY_SIZE_LABELS = {"S": "Маленькая (<50)", "M": "Средняя (50–250)", "L": "Крупная (>250)"}
 EMPLOYMENT_LABELS = {"FT": "Полная занятость", "PT": "Частичная", "CT": "Контракт", "FL": "Фриланс"}
 
-# Страны → регион. Группировка по уровню зарплат в IT, а не по географии:
-# в датасете на большинство стран меньше 5 записей, по отдельности их не выучить.
+# Регионы по уровню зарплат (у большинства стран < 5 записей)
 US = {"US", "PR"}  # PR — Пуэрто-Рико, территория США
 HIGH_INCOME = {"CA", "AU", "NZ", "CH", "DK", "NL", "DE", "AT", "BE", "LU", "IE", "IL",
                "GB", "SE", "NO", "FI", "JP", "SG", "AE", "FR"}
 MID_INCOME = {"ES", "IT", "PT", "GR", "PL", "CZ", "SI", "EE", "HR", "MT", "CY", "HU",
               "RO", "BG", "RS", "RU", "TR", "CL", "MX", "BR", "AR", "CN", "HK", "MY", "JE"}
-# всё остальное → "OTHER" (Индия, Пакистан, Нигерия, Вьетнам и т.д.)
+# остальные → OTHER
 
 REGION_LABELS = {
     "US": "США",
@@ -46,7 +36,7 @@ def country_region(code: str) -> str:
     return "OTHER"
 
 
-# Должность → семейство. Порядок правил важен: сначала более специфичные.
+# Первое совпавшее правило определяет семейство
 JOB_FAMILY_RULES = [
     ("Analyst",     ["analyst", "analytics"]),
     ("ML/AI",       ["machine learning", "ml ", "ml engineer", "ai ", "ai scientist",
@@ -69,7 +59,6 @@ JOB_FAMILY_LABELS = {
 
 def job_family(title: str) -> str:
     t = title.lower() + " "
-    # «Analytics Engineer» и «Data Analytics Engineer» — это скорее инженеры данных
     if "analytics engineer" in t:
         return "Data Eng"
     for family, words in JOB_FAMILY_RULES:
@@ -96,13 +85,12 @@ def load_raw(path) -> pd.DataFrame:
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Удаляем полные дубли: при кросс-валидации одна и та же строка
-    могла бы попасть и в обучение, и в проверку — это завышает качество."""
+    """Удаление полных дублей."""
     return df.drop_duplicates().reset_index(drop=True)
 
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Из «сырых» колонок датасета (или из формы в приложении) делает признаки модели."""
+    """Сырые колонки датасета (или формы приложения) → признаки модели."""
     out = pd.DataFrame(index=df.index)
     out["experience"] = df["experience_level"].map(EXPERIENCE_ORDER)
     out["company_size_n"] = df["company_size"].map(COMPANY_SIZE_ORDER)
@@ -118,6 +106,5 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def target(df: pd.DataFrame) -> np.ndarray:
-    """Учим на логарифме зарплаты: распределение с длинным хвостом,
-    а ошибка «в разах» для зарплат честнее, чем ошибка в долларах."""
+    """log(salary_in_usd)."""
     return np.log(df[TARGET].values)

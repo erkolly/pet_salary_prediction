@@ -1,10 +1,4 @@
-"""
-app.py — веб-приложение: вводишь параметры, получаешь прогноз зарплаты.
-
-Запуск из корня проекта:
-    streamlit run app.py
-Откроется браузер на http://localhost:8501
-"""
+"""Streamlit-приложение: прогноз зарплаты по параметрам анкеты.  streamlit run app.py"""
 import json
 import sys
 from pathlib import Path
